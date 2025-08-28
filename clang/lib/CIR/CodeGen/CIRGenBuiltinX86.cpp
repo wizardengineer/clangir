@@ -25,7 +25,6 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -360,24 +359,11 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned BuiltinID,
   }
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
-    Address tmp =
-        CreateMemTemp(E->getArg(0)->getType(), getLoc(E->getExprLoc()));
-    builder.createStore(getLoc(E->getExprLoc()), Ops[0], tmp);
-    return builder
-        .create<cir::LLVMIntrinsicCallOp>(
-            getLoc(E->getExprLoc()), builder.getStringAttr("x86.sse.ldmxcsr"),
-            builder.getVoidTy(), tmp.getPointer())
-        .getResult();
+    llvm_unreachable("mm_setcsr NYI");
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
-    Address tmp = CreateMemTemp(E->getType(), getLoc(E->getExprLoc()));
-    builder
-        .create<cir::LLVMIntrinsicCallOp>(
-            getLoc(E->getExprLoc()), builder.getStringAttr("x86.sse.stmxcsr"),
-            builder.getVoidTy(), tmp.getPointer())
-        .getResult();
-    return builder.createLoad(getLoc(E->getExprLoc()), tmp);
+    llvm_unreachable("mm_getcsr NYI");
   }
 
   case X86::BI__builtin_ia32_xsave:
@@ -851,97 +837,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_scattersiv4sf:
   case X86::BI__builtin_ia32_scattersiv4si:
   case X86::BI__builtin_ia32_scattersiv8sf:
-  case X86::BI__builtin_ia32_scattersiv8si: {
-    llvm::StringRef intrinsicName;
-    switch (BuiltinID) {
-    default:
-      llvm_unreachable("Unexpected builtin");
-    case X86::BI__builtin_ia32_scattersiv8df:
-      intrinsicName = "x86.avx512.mask.scatter.dpd.512";
-      break;
-    case X86::BI__builtin_ia32_scattersiv16sf:
-      intrinsicName = "x86.avx512.mask.scatter.dps.512";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv8df:
-      intrinsicName = "x86.avx512.mask.scatter.qpd.512";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv16sf:
-      intrinsicName = "x86.avx512.mask.scatter.qps.512";
-      break;
-    case X86::BI__builtin_ia32_scattersiv8di:
-      intrinsicName = "x86.avx512.mask.scatter.dpq.512";
-      break;
-    case X86::BI__builtin_ia32_scattersiv16si:
-      intrinsicName = "x86.avx512.mask.scatter.dpi.512";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv8di:
-      intrinsicName = "x86.avx512.mask.scatter.qpq.512";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv16si:
-      intrinsicName = "x86.avx512.mask.scatter.qpi.512";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv2df:
-      intrinsicName = "x86.avx512.mask.scatterdiv2.df";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv2di:
-      intrinsicName = "x86.avx512.mask.scatterdiv2.di";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv4df:
-      intrinsicName = "x86.avx512.mask.scatterdiv4.df";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv4di:
-      intrinsicName = "x86.avx512.mask.scatterdiv4.di";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv4sf:
-      intrinsicName = "x86.avx512.mask.scatterdiv4.sf";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv4si:
-      intrinsicName = "x86.avx512.mask.scatterdiv4.si";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv8sf:
-      intrinsicName = "x86.avx512.mask.scatterdiv8.sf";
-      break;
-    case X86::BI__builtin_ia32_scatterdiv8si:
-      intrinsicName = "x86.avx512.mask.scatterdiv8.si";
-      break;
-    case X86::BI__builtin_ia32_scattersiv2df:
-      intrinsicName = "x86.avx512.mask.scattersiv2.df";
-      break;
-    case X86::BI__builtin_ia32_scattersiv2di:
-      intrinsicName = "x86.avx512.mask.scattersiv2.di";
-      break;
-    case X86::BI__builtin_ia32_scattersiv4df:
-      intrinsicName = "x86.avx512.mask.scattersiv4.df";
-      break;
-    case X86::BI__builtin_ia32_scattersiv4di:
-      intrinsicName = "x86.avx512.mask.scattersiv4.di";
-      break;
-    case X86::BI__builtin_ia32_scattersiv4sf:
-      intrinsicName = "x86.avx512.mask.scattersiv4.sf";
-      break;
-    case X86::BI__builtin_ia32_scattersiv4si:
-      intrinsicName = "x86.avx512.mask.scattersiv4.si";
-      break;
-    case X86::BI__builtin_ia32_scattersiv8sf:
-      intrinsicName = "x86.avx512.mask.scattersiv8.sf";
-      break;
-    case X86::BI__builtin_ia32_scattersiv8si:
-      intrinsicName = "x86.avx512.mask.scattersiv8.si";
-      break;
-    }
-
-    unsigned minElts =
-        std::min(cast<cir::VectorType>(Ops[2].getType()).getSize(),
-                 cast<cir::VectorType>(Ops[3].getType()).getSize());
-    Ops[1] = getMaskVecValue(*this, Ops[1], minElts, getLoc(E->getExprLoc()));
-
-    return builder
-        .create<cir::LLVMIntrinsicCallOp>(
-            getLoc(E->getExprLoc()), builder.getStringAttr(intrinsicName.str()),
-            builder.getVoidTy(), Ops)
-        .getResult();
-  }
-
+  case X86::BI__builtin_ia32_scattersiv8si:
+    llvm_unreachable("scattersiv8df NYI");
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256:
@@ -974,39 +871,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_insertf64x2_256:
   case X86::BI__builtin_ia32_inserti64x2_256:
   case X86::BI__builtin_ia32_insertf64x2_512:
-  case X86::BI__builtin_ia32_inserti64x2_512: {
-    unsigned dstNumElts = cast<cir::VectorType>(Ops[0].getType()).getSize();
-    unsigned srcNumElts = cast<cir::VectorType>(Ops[1].getType()).getSize();
-    unsigned subVectors = dstNumElts / srcNumElts;
-    unsigned index =
-        Ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
-    assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
-    index &= subVectors - 1; // Remove any extra bits.
-    index *= srcNumElts;
-
-    int64_t indices[16];
-    for (unsigned i = 0; i != dstNumElts; ++i)
-      indices[i] = (i >= srcNumElts) ? srcNumElts + (i % srcNumElts) : i;
-
-    cir::ConstantOp poisonVec =
-        builder.getConstant(getLoc(E->getExprLoc()),
-                            builder.getAttr<cir::PoisonAttr>(Ops[1].getType()));
-
-    mlir::Value op1 =
-        builder.createVecShuffle(getLoc(E->getExprLoc()), Ops[1], poisonVec,
-                                 ArrayRef(indices, dstNumElts));
-
-    for (unsigned i = 0; i != dstNumElts; ++i) {
-      if (i >= index && i < (index + srcNumElts))
-        indices[i] = (i - index) + dstNumElts;
-      else
-        indices[i] = i;
-    }
-
-    return builder.createVecShuffle(getLoc(E->getExprLoc()), Ops[0], op1,
-                                    ArrayRef(indices, dstNumElts));
-  }
-
+  case X86::BI__builtin_ia32_inserti64x2_512:
+    llvm_unreachable("insertf128 NYI");
   case X86::BI__builtin_ia32_pmovqd512_mask:
   case X86::BI__builtin_ia32_pmovwb512_mask:
     llvm_unreachable("pmovqd512_mask NYI");
@@ -1017,20 +883,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_blendps256:
   case X86::BI__builtin_ia32_pblendw256:
   case X86::BI__builtin_ia32_pblendd128:
-  case X86::BI__builtin_ia32_pblendd256: {
-    unsigned numElts = cast<cir::VectorType>(Ops[0].getType()).getSize();
-    unsigned imm =
-        Ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
-
-    int64_t indices[16];
-    // If there are more than 8 elements, the immediate is used twice so make
-    // sure we handle that.
-    for (unsigned i = 0; i != numElts; ++i)
-      indices[i] = ((imm >> (i % 8)) & 0x1) ? numElts + i : i;
-
-    return builder.createVecShuffle(getLoc(E->getExprLoc()), Ops[0], Ops[1],
-                                    ArrayRef(indices, numElts));
-  }
+  case X86::BI__builtin_ia32_pblendd256:
+    llvm_unreachable("pblendd128 NYI");
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512:
@@ -1048,36 +902,29 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpermilps256:
   case X86::BI__builtin_ia32_vpermilpd512:
   case X86::BI__builtin_ia32_vpermilps512: {
-    uint32_t imm = getIntValueFromConstOp(Ops[1]);
-    auto vecTy = cast<cir::VectorType>(Ops[0].getType());
-    unsigned numElts = vecTy.getSize();
-    auto eltTy = vecTy.getElementType();
+    uint32_t Imm = getIntValueFromConstOp(Ops[1]);
+    auto VecTy = cast<cir::VectorType>(Ops[0].getType());
+    unsigned NumElts = VecTy.getSize();
 
-    assert(isSized(eltTy) && "Element type must be a sized type");
+    // Calculate vector bit width using SizedTypeInterface
+    auto EltTy = VecTy.getElementType();
+    unsigned EltBitWidth = getTypeSizeInBits(EltTy);
+    unsigned VecBitWidth = EltBitWidth * NumElts;
+    unsigned NumLanes = VecBitWidth / 128;
+    unsigned NumLaneElts = NumElts / NumLanes;
 
-    unsigned eltBitWidth =
-        llvm::TypeSwitch<mlir::Type, unsigned>(eltTy)
-            .Case<cir::IntType>([](auto intTy) { return intTy.getWidth(); })
-            .Case<cir::SingleType>([](auto) { return 32; })
-            .Case<cir::DoubleType>([](auto) { return 64; })
-            .Default([](auto) {
-              llvm_unreachable("NYI: Unsupported type");
-              return 0;
-            });
+    // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+    Imm = (Imm & 0xff) * 0x01010101;
 
-    unsigned vecBitWidth = numElts * eltBitWidth;
-    unsigned numLanes = vecBitWidth / 128;
-    unsigned numLaneElts = numElts / numLanes;
-
-    imm = (imm & 0xff) * 0x01010101;
-    llvm::SmallVector<int64_t, 16> indices;
-    for (unsigned l = 0; l != numElts; l += numLaneElts) {
-      for (unsigned i = 0; i != numLaneElts; ++i) {
-        indices.push_back((imm % numLaneElts) + l);
-        imm /= numLaneElts;
+    llvm::SmallVector<int64_t, 16> Indices;
+    for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
+      for (unsigned i = 0; i != NumLaneElts; ++i) {
+        Indices.push_back((Imm % NumLaneElts) + l);
+        Imm /= NumLaneElts;
       }
     }
-    return builder.createVecShuffle(getLoc(E->getExprLoc()), Ops[0], indices);
+
+    return builder.createVecShuffle(getLoc(E->getExprLoc()), Ops[0], Indices);
   }
   case X86::BI__builtin_ia32_shufpd:
   case X86::BI__builtin_ia32_shufpd256:
