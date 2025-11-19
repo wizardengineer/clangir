@@ -23,6 +23,7 @@
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
 #include "CIRGenValue.h"
+#include "clang/AST/Decl.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/ASTContext.h"
@@ -153,6 +154,8 @@ private:
 
   llvm::DenseMap<const Expr *, mlir::Operation *>
       materializedGlobalTemporaryMap;
+
+  llvm::SmallVector<std::string> moduleAsm;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -969,6 +972,10 @@ public:
   /// one of them.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 
+
+  /// Build asm string for global base asm 
+  void buildFileScopeAsm(const FileScopeAsmDecl *D);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;
@@ -1000,6 +1007,14 @@ private:
   /// Add global annotations for a global value.
   /// Those annotations are emitted during lowering to the LLVM code.
   void addGlobalAnnotations(const ValueDecl *d, mlir::Operation *gv);
+
+  /// Append module-level inline assembly
+  void appendModuleInlineAsm(llvm::StringRef Asm) {
+    moduleAsm.push_back(Asm.str());
+  }
+
+  /// Finalize module attribute (call at the end of codegen)
+  void finalizeModuleAttributes();
 };
 } // namespace clang::CIRGen
 
